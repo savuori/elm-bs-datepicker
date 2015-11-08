@@ -1,11 +1,12 @@
 module DatePicker where
 
-import Html exposing (Html, table, td, tr, th, div, text)
+import Html exposing (Html, table, td, tr, th, div, text, span, h2)
 import Html.Attributes exposing (style)
 import Html.Events exposing (onClick)
 import Date exposing (Date, Day, fromTime, toTime, month, day, year, dayOfWeek)
 import Time exposing (Time)
 import Signal exposing (Address)
+import Date.Format exposing (format)
 
 
 monthToInt : Date.Month -> Int
@@ -22,6 +23,24 @@ monthToInt m = case m of
     Date.Oct -> 10
     Date.Nov -> 11
     Date.Dec -> 12
+
+localizedMonth : Date.Month -> String -> String
+localizedMonth m locale =
+  case locale of
+    "fi_FI" ->
+      case m of
+        Date.Jan -> "Tammikuu"
+        Date.Feb -> "Helmikuu"
+        Date.Mar -> "Maaliskuu"
+        Date.Apr -> "Huhtikuu"
+        Date.May -> "Toukokuu"
+        Date.Jun -> "Kesäkuu"
+        Date.Jul -> "Heinäkuu"
+        Date.Aug -> "Elokuu"
+        Date.Sep -> "Syyskuu"
+        Date.Oct -> "Lokakuu"
+        Date.Nov -> "Marraskuu"
+        Date.Dec -> "Joulukuu"
 
 
 daysOfTheWeek : List Day
@@ -106,7 +125,7 @@ groupByWeek dayList current =
 
 comparableByDay : Date -> Int
 comparableByDay date =
-  (year date) * 1000 + (monthToInt (month date)) * 100 + (day date)
+  (year date) * 10000 + (monthToInt (month date)) * 100 + (day date)
 
 renderDay : Address Action -> Model -> Maybe Date -> Html
 renderDay address model date =
@@ -142,27 +161,39 @@ renderTable address model dayList =
 
 renderTableHeader : Address Action -> Model -> Html
 renderTableHeader address model =
-  div [] []
+  div [style [("width", "4em"), ("margin-left", "auto"), ("margin-right", "auto"), ("position", "relative")]]
+    [div []
+      [ (h2 [] [(model.browseDate) |> year |> toString |> text])
+      , (span [ onClick address PreviousMonth, style [("position", "absolute"), ("left", "-1em")] ] [text "<"])
+      , (span [] [text (localizedMonth (month model.browseDate) "fi_FI")])
+      , (span [onClick address NextMonth, style [("position", "absolute"), ("right", "-2em")]] [text ">"])
+      ]
+    ]
+
+renderSelected: Model -> Html
+renderSelected model =
+  div []
+    [text ("Valittu päivä:" ++ (format "%d.%m.%Y" model.selectedDate))]
 
 renderPicker : Address Action -> Model -> Day -> Html
 renderPicker address model firstDayOfWeek =
   let allDays = daysOfTheMonth model.browseDate
       paddedList = padByStartOfWeek firstDayOfWeek allDays
   in
-      div []
+      div [style [("width", "12em")]]
         [ renderTableHeader address model
         , renderTable address model paddedList
+        , renderSelected model
         ]
 
 type Action = PreviousMonth | NextMonth | SelectDate Date | NoOp
 
-picker : Signal.Mailbox Action
-picker = Signal.mailbox NoOp
 
 type alias Model =
   { dateNow : Date
   , browseDate : Date
   , selectedDate : Date
+  , showPicker : Bool
   }
 
 getPreviousMonth : Date -> Date
@@ -180,10 +211,10 @@ model : Model
 model =
   let curDate = (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
   in
-    Model curDate curDate (fromTime 0)
+    Model curDate curDate (fromTime 0) False
 
-update : Model -> Action -> Model
-update model action =
+update : Action -> Model -> Model
+update action model =
   case action of
     PreviousMonth
       -> { model | browseDate <- getPreviousMonth model.browseDate}
@@ -194,8 +225,13 @@ update model action =
     NoOp
       -> model
 
+picker : Signal.Mailbox Action
+picker = Signal.mailbox NoOp
+
+
 view : Address Action -> Model -> Html
 view address model = renderPicker address model Date.Mon
 
-main : Html
-main = view picker.address model
+
+main : Signal Html
+main = Signal.map (view picker.address) (Signal.foldp update model picker.signal)
