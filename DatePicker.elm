@@ -66,7 +66,7 @@ padByStartOfWeek day dateList =
                   Nothing
                     -> 0
                   Just fd
-                    -> 7 + (dayToInt day) - (dayToInt (dayOfWeek fd))
+                    -> (7 - (dayToInt day) + (dayToInt (dayOfWeek fd))) % 7
       justDays = List.map (\date -> Just date) dateList
   in
       (List.repeat padding Nothing) ++ justDays
@@ -99,8 +99,7 @@ renderTable dayList =
 
 
 view : Date -> Html
-view date = div [] [(daysOfTheMonth date) |> List.map day |> toString |> text
-                   , (text (toString (month date)))]
+view date = (daysOfTheMonth date) |> (padByStartOfWeek Date.Mon) |> renderTable
 
 main : Html
-main = view (Date.fromTime 1424234330266)
+main = view (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 9)))
