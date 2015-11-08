@@ -1,7 +1,7 @@
 module DatePicker where
 
-import Html exposing (Html, table, td, tr, th, div, text, span, h2)
-import Html.Attributes exposing (style)
+import Html exposing (Html, table, td, tr, th, div, text, span, h2, img)
+import Html.Attributes exposing (style, src)
 import Html.Events exposing (onClick)
 import Date exposing (Date, Day, fromTime, toTime, month, day, year, dayOfWeek)
 import Time exposing (Time)
@@ -156,24 +156,34 @@ renderTable : Address Action -> Model -> List (Maybe Date) -> Html
 renderTable address model dayList =
   let daysByWeek = groupByWeek dayList []
   in
-      table []
+      table [style [("padding-top", "0.5em")]]
          (List.map (renderRow address model) daysByWeek)
 
 renderTableHeader : Address Action -> Model -> Html
 renderTableHeader address model =
-  div [style [("width", "4em"), ("margin-left", "auto"), ("margin-right", "auto"), ("position", "relative")]]
+  div [style [("width", "4em"), ("margin-left", "auto"), ("margin-right", "auto"), ("position", "relative"), ("padding-bottom", "1em")]]
     [div []
-      [ (h2 [] [(model.browseDate) |> year |> toString |> text])
-      , (span [ onClick address PreviousMonth, style [("position", "absolute"), ("left", "-1em")] ] [text "<"])
-      , (span [] [text (localizedMonth (month model.browseDate) "fi_FI")])
-      , (span [onClick address NextMonth, style [("position", "absolute"), ("right", "-2em")]] [text ">"])
+      [ (h2 [style [("padding-left", "0.3em")]] [(model.browseDate) |> year |> toString |> text])
+      , div []
+         [ (img [onClick address PreviousMonth, style [("position", "absolute"), ("left", "-2em"), ("bottom", "0"), ("width", "24px")], src "arrowleft.png"] [])
+         , (span [style [("text-align", "center"), ("position", "absolute"), ("bottom", "0.1em")]] [text (localizedMonth (month model.browseDate) "fi_FI")])
+         , (img [onClick address NextMonth, style [("position", "absolute"), ("right", "-3em"), ("bottom", "0"), ("width", "24px") ], src "arrowright.png"] [])
+         ]
       ]
     ]
 
 renderSelected: Model -> Html
 renderSelected model =
-  div []
-    [text ("Valittu päivä:" ++ (format "%d.%m.%Y" model.selectedDate))]
+  let selectedText =
+    case model.selectedDate of
+
+      Nothing
+        -> "Ei valittu"
+      Just date
+        -> (format "%d.%m.%Y" date)
+  in
+    div []
+      [text ("Valittu päivä:" ++ selectedText)]
 
 renderPicker : Address Action -> Model -> Day -> Html
 renderPicker address model firstDayOfWeek =
@@ -181,9 +191,9 @@ renderPicker address model firstDayOfWeek =
       paddedList = padByStartOfWeek firstDayOfWeek allDays
   in
       div [style [("width", "12em")]]
-        [ renderTableHeader address model
+        [ renderSelected model
+        , renderTableHeader address model
         , renderTable address model paddedList
-        , renderSelected model
         ]
 
 type Action = PreviousMonth | NextMonth | SelectDate Date | NoOp
@@ -192,7 +202,7 @@ type Action = PreviousMonth | NextMonth | SelectDate Date | NoOp
 type alias Model =
   { dateNow : Date
   , browseDate : Date
-  , selectedDate : Date
+  , selectedDate : Maybe Date
   , showPicker : Bool
   }
 
@@ -211,7 +221,7 @@ model : Model
 model =
   let curDate = (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
   in
-    Model curDate curDate (fromTime 0) False
+    Model curDate curDate Nothing False
 
 update : Action -> Model -> Model
 update action model =
@@ -221,7 +231,7 @@ update action model =
     NextMonth
       -> { model | browseDate <- getNextMonth model.browseDate}
     SelectDate date
-      -> { model | selectedDate <- date}
+      -> { model | selectedDate <- Just date}
     NoOp
       -> model
 
