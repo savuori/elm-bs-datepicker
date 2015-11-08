@@ -104,17 +104,20 @@ groupByWeek dayList current =
     days
       -> groupByWeek (List.drop 7 days) (current ++ [List.take 7 days])
 
+comparableByDay : Date -> Int
+comparableByDay date =
+  (year date) * 1000 + (monthToInt (month date)) * 100 + (day date)
 
-renderDay : Address Action -> Date -> Maybe Date -> Html
-renderDay address currentDate date =
+renderDay : Address Action -> Model -> Maybe Date -> Html
+renderDay address model date =
   case date of
     Nothing
       -> td [] []
     Just d
       ->
-       let currentDay = currentDate |> day
+       let currentDay = model.dateNow |> comparableByDay
            renderedDay = d |> day
-           bgColor = if currentDay == renderedDay then "#90A0E0" else "#D5E5F5"
+           bgColor = if currentDay == (comparableByDay d) then "#90A0E0" else "#D5E5F5"
        in
            td [ (style [("text-align", "right")
                      ,("padding", "3px 5px")
@@ -125,33 +128,74 @@ renderDay address currentDate date =
               [d |> day |> toString |> text]
 
 
-renderRow : Address Action -> Date -> List (Maybe Date) -> Html
-renderRow address currentDate dayList =
-  tr [] (List.map (renderDay address currentDate) dayList)
+renderRow : Address Action -> Model -> List (Maybe Date) -> Html
+renderRow address model dayList =
+  tr [] (List.map (renderDay address model) dayList)
 
 
-renderTable : Address Action -> Date -> List (Maybe Date) -> Html
-renderTable address currentDate dayList =
+renderTable : Address Action -> Model -> List (Maybe Date) -> Html
+renderTable address model dayList =
   let daysByWeek = groupByWeek dayList []
   in
       table []
-         (List.map (renderRow address currentDate) daysByWeek)
+         (List.map (renderRow address model) daysByWeek)
 
+renderTableHeader : Address Action -> Model -> Html
+renderTableHeader address model =
+  div [] []
 
-renderPicker : Address Action -> Date -> Day -> Html
-renderPicker address currentDate firstDayOfWeek =
-  let allDays = daysOfTheMonth currentDate
+renderPicker : Address Action -> Model -> Day -> Html
+renderPicker address model firstDayOfWeek =
+  let allDays = daysOfTheMonth model.browseDate
       paddedList = padByStartOfWeek firstDayOfWeek allDays
   in
-      renderTable address currentDate paddedList
+      div []
+        [ renderTableHeader address model
+        , renderTable address model paddedList
+        ]
 
 type Action = PreviousMonth | NextMonth | SelectDate Date | NoOp
 
 picker : Signal.Mailbox Action
 picker = Signal.mailbox NoOp
 
-view : Address Action -> Date -> Html
-view address date = renderPicker address date Date.Mon
+type alias Model =
+  { dateNow : Date
+  , browseDate : Date
+  , selectedDate : Date
+  }
+
+getPreviousMonth : Date -> Date
+getPreviousMonth date =
+  fromTime ((toTime (firstDayOfMonth date)) - (daysToMillis 1))
+
+getNextMonth : Date -> Date
+getNextMonth date =
+  let curDay = (day date)
+      daysToForward = (32 - curDay) |> toFloat
+  in
+      fromTime ((toTime date) + (daysToMillis daysToForward))
+
+model : Model
+model =
+  let curDate = (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
+  in
+    Model curDate curDate (fromTime 0)
+
+update : Model -> Action -> Model
+update model action =
+  case action of
+    PreviousMonth
+      -> { model | browseDate <- getPreviousMonth model.browseDate}
+    NextMonth
+      -> { model | browseDate <- getNextMonth model.browseDate}
+    SelectDate date
+      -> { model | selectedDate <- date}
+    NoOp
+      -> model
+
+view : Address Action -> Model -> Html
+view address model = renderPicker address model Date.Mon
 
 main : Html
-main = view picker.address (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
+main = view picker.address model
