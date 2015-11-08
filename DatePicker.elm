@@ -22,15 +22,31 @@ monthToInt m = case m of
     Date.Dec -> 12
 
 
-dayToInt : Date.Day -> Int
-dayToInt d = case d of
-    Date.Mon -> 1
-    Date.Tue -> 2
-    Date.Wed -> 3
-    Date.Thu -> 4
-    Date.Fri -> 5
-    Date.Sat -> 6
-    Date.Sun -> 7
+daysOfTheWeek : List Day
+daysOfTheWeek = [Date.Mon, Date.Tue, Date.Wed, Date.Thu, Date.Fri, Date.Sat, Date.Sun]
+
+weekdayTuples : List (Int, Day)
+weekdayTuples = List.map2 (,) [1..7] daysOfTheWeek
+
+type DayOrInt = Day | Int
+
+dayToInt : Day -> Int
+dayToInt day = fst(dayIntMapper day snd)
+
+intToDay : Int -> Day
+intToDay num =
+  let limitedNum = ((num - 1) % 7) + 1
+  in snd(dayIntMapper limitedNum fst)
+
+dayIntMapper : b -> ((Int, Day) -> b) -> (Int, Day)
+dayIntMapper key selector =
+  let f tuple = (selector tuple) == key
+  in
+    case List.head(List.filter f weekdayTuples) of
+      Nothing
+        -> (-1, Date.Mon) -- shouldn't ever happen
+      Just tuple
+        -> tuple
 
 
 hInDay : Time
