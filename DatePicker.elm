@@ -1,8 +1,10 @@
 module DatePicker where
 
 import Html exposing (Html, table, td, tr, th, div, text)
-import Date exposing (Date, Day, fromTime, toTime, month, day, dayOfWeek)
+import Html.Attributes exposing (style)
+import Date exposing (Date, Day, fromTime, toTime, month, day, year, dayOfWeek)
 import Time exposing (Time)
+
 
 monthToInt : Date.Month -> Int
 monthToInt m = case m of
@@ -19,6 +21,7 @@ monthToInt m = case m of
     Date.Nov -> 11
     Date.Dec -> 12
 
+
 dayToInt : Date.Day -> Int
 dayToInt d = case d of
     Date.Mon -> 1
@@ -29,14 +32,18 @@ dayToInt d = case d of
     Date.Sat -> 6
     Date.Sun -> 7
 
+
 hInDay : Time
 hInDay = 24.0
+
 
 secInHour : Time
 secInHour = 3600.0
 
+
 daysToMillis : Time -> Time
 daysToMillis d = d * hInDay * secInHour * 1000
+
 
 firstDayOfMonth : Date -> Date
 firstDayOfMonth d =
@@ -59,6 +66,7 @@ daysOfTheMonth date =
       |> List.filter dayFilter
       |> List.map snd
 
+
 padByStartOfWeek : Date.Day -> List Date -> List (Maybe Date)
 padByStartOfWeek day dateList =
   let firstDay = List.head dateList
@@ -71,6 +79,7 @@ padByStartOfWeek day dateList =
   in
       (List.repeat padding Nothing) ++ justDays
 
+
 groupByWeek : List (Maybe Date) -> List (List (Maybe Date))-> List (List (Maybe Date))
 groupByWeek dayList current =
   case dayList of
@@ -79,27 +88,49 @@ groupByWeek dayList current =
     days
       -> groupByWeek (List.drop 7 days) (current ++ [List.take 7 days])
 
-renderDay : Maybe Date -> Html
-renderDay date =
+
+renderDay : Date -> Maybe Date -> Html
+renderDay currentDate date =
   case date of
     Nothing
       -> td [] []
     Just d
-      -> td [] [d |> day |> toString |> text]
+      ->
+       let currentDay = currentDate |> day
+           renderedDay = d |> day
+           bgColor = if currentDay == renderedDay then "#90A0E0" else "#D5E5F5"
+       in
+           td [style [("text-align", "right")
+                     ,("padding", "3px 5px")
+                     ,("background-color", bgColor)
+                     ]]
+              [d |> day |> toString |> text]
 
-renderRow : List (Maybe Date) -> Html
-renderRow dayList =
-  tr [] (List.map renderDay dayList)
 
-renderTable : List (Maybe Date) -> Html
-renderTable dayList =
+renderRow : Date -> List (Maybe Date) -> Html
+renderRow currentDate dayList =
+  tr [] (List.map (renderDay currentDate) dayList)
+
+
+renderTable : Date -> List (Maybe Date) -> Html
+renderTable currentDate dayList =
   let daysByWeek = groupByWeek dayList []
   in
-      table [] (List.map renderRow daysByWeek)
+      table []
+         (List.map (renderRow currentDate) daysByWeek)
+
+
+renderPicker : Date -> Day -> Html
+renderPicker currentDate firstDayOfWeek =
+  let allDays = daysOfTheMonth currentDate
+      paddedList = padByStartOfWeek firstDayOfWeek allDays
+  in
+      renderTable currentDate paddedList
 
 
 view : Date -> Html
-view date = (daysOfTheMonth date) |> (padByStartOfWeek Date.Mon) |> renderTable
+view date = renderPicker date Date.Mon
+
 
 main : Html
-main = view (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 9)))
+main = view (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
