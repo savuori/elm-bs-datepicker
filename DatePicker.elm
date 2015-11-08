@@ -2,8 +2,10 @@ module DatePicker where
 
 import Html exposing (Html, table, td, tr, th, div, text)
 import Html.Attributes exposing (style)
+import Html.Events exposing (onClick)
 import Date exposing (Date, Day, fromTime, toTime, month, day, year, dayOfWeek)
 import Time exposing (Time)
+import Signal exposing (Address)
 
 
 monthToInt : Date.Month -> Int
@@ -27,8 +29,6 @@ daysOfTheWeek = [Date.Mon, Date.Tue, Date.Wed, Date.Thu, Date.Fri, Date.Sat, Dat
 
 weekdayTuples : List (Int, Day)
 weekdayTuples = List.map2 (,) [1..7] daysOfTheWeek
-
-type DayOrInt = Day | Int
 
 dayToInt : Day -> Int
 dayToInt day = fst(dayIntMapper day snd)
@@ -105,8 +105,8 @@ groupByWeek dayList current =
       -> groupByWeek (List.drop 7 days) (current ++ [List.take 7 days])
 
 
-renderDay : Date -> Maybe Date -> Html
-renderDay currentDate date =
+renderDay : Address Action -> Date -> Maybe Date -> Html
+renderDay address currentDate date =
   case date of
     Nothing
       -> td [] []
@@ -116,37 +116,42 @@ renderDay currentDate date =
            renderedDay = d |> day
            bgColor = if currentDay == renderedDay then "#90A0E0" else "#D5E5F5"
        in
-           td [style [("text-align", "right")
+           td [ (style [("text-align", "right")
                      ,("padding", "3px 5px")
                      ,("background-color", bgColor)
-                     ]]
+                     ])
+              , onClick address (SelectDate d)
+              ]
               [d |> day |> toString |> text]
 
 
-renderRow : Date -> List (Maybe Date) -> Html
-renderRow currentDate dayList =
-  tr [] (List.map (renderDay currentDate) dayList)
+renderRow : Address Action -> Date -> List (Maybe Date) -> Html
+renderRow address currentDate dayList =
+  tr [] (List.map (renderDay address currentDate) dayList)
 
 
-renderTable : Date -> List (Maybe Date) -> Html
-renderTable currentDate dayList =
+renderTable : Address Action -> Date -> List (Maybe Date) -> Html
+renderTable address currentDate dayList =
   let daysByWeek = groupByWeek dayList []
   in
       table []
-         (List.map (renderRow currentDate) daysByWeek)
+         (List.map (renderRow address currentDate) daysByWeek)
 
 
-renderPicker : Date -> Day -> Html
-renderPicker currentDate firstDayOfWeek =
+renderPicker : Address Action -> Date -> Day -> Html
+renderPicker address currentDate firstDayOfWeek =
   let allDays = daysOfTheMonth currentDate
       paddedList = padByStartOfWeek firstDayOfWeek allDays
   in
-      renderTable currentDate paddedList
+      renderTable address currentDate paddedList
 
+type Action = PreviousMonth | NextMonth | SelectDate Date | NoOp
 
-view : Date -> Html
-view date = renderPicker date Date.Mon
+picker : Signal.Mailbox Action
+picker = Signal.mailbox NoOp
 
+view : Address Action -> Date -> Html
+view address date = renderPicker address date Date.Mon
 
 main : Html
-main = view (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
+main = view picker.address (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
