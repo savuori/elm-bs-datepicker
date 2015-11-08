@@ -24,8 +24,8 @@ monthToInt m = case m of
     Date.Nov -> 11
     Date.Dec -> 12
 
-localizedMonth : Date.Month -> String -> String
-localizedMonth m locale =
+localizedMonth : String -> Date.Month -> String
+localizedMonth locale m =
   case locale of
     "fi_FI" ->
       case m of
@@ -42,12 +42,24 @@ localizedMonth m locale =
         Date.Nov -> "Marraskuu"
         Date.Dec -> "Joulukuu"
 
+localizedWeekday : String -> Date.Day -> String
+localizedWeekday locale d =
+  case locale of
+    "fi_FI" ->
+      case d of
+        Date.Mon -> "Ma"
+        Date.Tue -> "Ti"
+        Date.Wed -> "Ke"
+        Date.Thu -> "To"
+        Date.Fri -> "Pe"
+        Date.Sat -> "La"
+        Date.Sun -> "Su"
 
-daysOfTheWeek : List Day
-daysOfTheWeek = [Date.Mon, Date.Tue, Date.Wed, Date.Thu, Date.Fri, Date.Sat, Date.Sun]
+daysOfWeek : List Day
+daysOfWeek = [Date.Mon, Date.Tue, Date.Wed, Date.Thu, Date.Fri, Date.Sat, Date.Sun]
 
 weekdayTuples : List (Int, Day)
-weekdayTuples = List.map2 (,) [1..7] daysOfTheWeek
+weekdayTuples = List.map2 (,) [1..7] daysOfWeek
 
 dayToInt : Day -> Int
 dayToInt day = fst(dayIntMapper day snd)
@@ -135,12 +147,16 @@ renderDay address model date =
     Just d
       ->
        let currentDay = model.dateNow |> comparableByDay
+           selectedDay = model.selectedDate |> Maybe.withDefault (fromTime 0) |> comparableByDay
            renderedDay = d |> day
-           bgColor = if currentDay == (comparableByDay d) then "#90A0E0" else "#D5E5F5"
+           bgColor = if | currentDay == (comparableByDay d) -> "#90A0E0"
+                        | selectedDay == (comparableByDay d) -> "#B06090"
+                        | otherwise -> "#D5E5F5"
        in
-           td [ (style [("text-align", "right")
+           td [ (style [("text-align", "center")
                      ,("padding", "3px 5px")
                      ,("background-color", bgColor)
+                     ,("cursor", "pointer")
                      ])
               , onClick address (SelectDate d)
               ]
@@ -151,13 +167,25 @@ renderRow : Address Action -> Model -> List (Maybe Date) -> Html
 renderRow address model dayList =
   tr [] (List.map (renderDay address model) dayList)
 
+renderHeaderRow : Day -> Html
+renderHeaderRow startOfWeek =
+  let days = daysOfWeek ++ daysOfWeek
+      startIndex = dayToInt startOfWeek
+      adjustedDays = days |> (List.drop (startIndex - 1)) |> (List.take 7)
+      localizedDays = List.map (localizedWeekday "fi_FI") adjustedDays
+      renderDay d = td [] [text d]
+  in
+      tr []
+        (List.map renderDay localizedDays)
+
 
 renderTable : Address Action -> Model -> List (Maybe Date) -> Html
 renderTable address model dayList =
   let daysByWeek = groupByWeek dayList []
   in
-      table [style [("padding-top", "0.5em")]]
-         (List.map (renderRow address model) daysByWeek)
+      table [style [("padding", "0.5em"), ("background-color", "#F0F5F5")]]
+        ([renderHeaderRow model.firstDayOfWeek] ++
+        (List.map (renderRow address model) daysByWeek))
 
 renderTableHeader : Address Action -> Model -> Html
 renderTableHeader address model =
@@ -165,9 +193,9 @@ renderTableHeader address model =
     [div []
       [ (h2 [style [("padding-left", "0.3em")]] [(model.browseDate) |> year |> toString |> text])
       , div []
-         [ (img [onClick address PreviousMonth, style [("position", "absolute"), ("left", "-2em"), ("bottom", "0"), ("width", "24px")], src "arrowleft.png"] [])
-         , (span [style [("text-align", "center"), ("position", "absolute"), ("bottom", "0.1em")]] [text (localizedMonth (month model.browseDate) "fi_FI")])
-         , (img [onClick address NextMonth, style [("position", "absolute"), ("right", "-3em"), ("bottom", "0"), ("width", "24px") ], src "arrowright.png"] [])
+         [ (img [onClick address PreviousMonth, style [("cursor", "pointer"), ("position", "absolute"), ("left", "-2em"), ("bottom", "0"), ("width", "24px")], src "arrowleft.png"] [])
+         , (span [style [("text-align", "center"), ("position", "absolute"), ("bottom", "0.1em")]] [text (localizedMonth "fi_FI" (month model.browseDate))])
+         , (img [onClick address NextMonth, style [("cursor", "pointer"), ("position", "absolute"), ("right", "-3em"), ("bottom", "0"), ("width", "24px") ], src "arrowright.png"] [])
          ]
       ]
     ]
@@ -185,10 +213,10 @@ renderSelected model =
     div []
       [text ("Valittu päivä:" ++ selectedText)]
 
-renderPicker : Address Action -> Model -> Day -> Html
-renderPicker address model firstDayOfWeek =
+renderPicker : Address Action -> Model -> Html
+renderPicker address model =
   let allDays = daysOfTheMonth model.browseDate
-      paddedList = padByStartOfWeek firstDayOfWeek allDays
+      paddedList = padByStartOfWeek model.firstDayOfWeek allDays
   in
       div [style [("width", "12em")]]
         [ renderSelected model
@@ -203,6 +231,7 @@ type alias Model =
   { dateNow : Date
   , browseDate : Date
   , selectedDate : Maybe Date
+  , firstDayOfWeek : Date.Day
   , showPicker : Bool
   }
 
@@ -221,7 +250,7 @@ model : Model
 model =
   let curDate = (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
   in
-    Model curDate curDate Nothing False
+    Model curDate curDate Nothing Date.Mon False
 
 update : Action -> Model -> Model
 update action model =
@@ -240,7 +269,7 @@ picker = Signal.mailbox NoOp
 
 
 view : Address Action -> Model -> Html
-view address model = renderPicker address model Date.Mon
+view address model = renderPicker address model
 
 
 main : Signal Html
