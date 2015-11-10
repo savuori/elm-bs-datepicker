@@ -17,59 +17,6 @@ monthToInt m = case m of
     Date.Nov -> 11
     Date.Dec -> 12
 
-localizedMonth : String -> Date.Month -> String
-localizedMonth locale m =
-  case locale of
-    "fi_FI" ->
-      case m of
-        Date.Jan -> "Tammikuu"
-        Date.Feb -> "Helmikuu"
-        Date.Mar -> "Maaliskuu"
-        Date.Apr -> "Huhtikuu"
-        Date.May -> "Toukokuu"
-        Date.Jun -> "Kesäkuu"
-        Date.Jul -> "Heinäkuu"
-        Date.Aug -> "Elokuu"
-        Date.Sep -> "Syyskuu"
-        Date.Oct -> "Lokakuu"
-        Date.Nov -> "Marraskuu"
-        Date.Dec -> "Joulukuu"
-    "en_US" ->
-      case m of
-        Date.Jan -> "January"
-        Date.Feb -> "February"
-        Date.Mar -> "March"
-        Date.Apr -> "April"
-        Date.May -> "May"
-        Date.Jun -> "June"
-        Date.Jul -> "July"
-        Date.Aug -> "August"
-        Date.Sep -> "September"
-        Date.Oct -> "October"
-        Date.Nov -> "November"
-        Date.Dec -> "December"
-
-localizedWeekday : String -> Date.Day -> String
-localizedWeekday locale d =
-  case locale of
-    "fi_FI" ->
-      case d of
-        Date.Mon -> "Ma"
-        Date.Tue -> "Ti"
-        Date.Wed -> "Ke"
-        Date.Thu -> "To"
-        Date.Fri -> "Pe"
-        Date.Sat -> "La"
-        Date.Sun -> "Su"
-    "en_US" ->
-      case d of
-        Date.Mon -> "Mo"
-        Date.Tue -> "Tu"
-        Date.Wed -> "We"
-        Date.Thu -> "Th"
-        Date.Fri -> "Fr"
-        Date.Sat -> "Sa"
-        Date.Sun -> "Su"
 
 daysOfWeek : List Day
 daysOfWeek = [Date.Mon, Date.Tue, Date.Wed, Date.Thu, Date.Fri, Date.Sat, Date.Sun]
