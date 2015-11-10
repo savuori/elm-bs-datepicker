@@ -4,7 +4,7 @@ import Html exposing (Html, table, td, tr, th, div, text, span, thead, tbody, in
 import Html.Lazy exposing (lazy, lazy2, lazy3)
 import Date exposing (Date, Day, fromTime, toTime, month, day, year, dayOfWeek)
 import Signal exposing (Address)
-import Time exposing (hour, second, minute, Time)
+import Time exposing (Time, timestamp)
 
 import Arithmetic exposing (daysToMillis, firstDayOfMonth, comparableByDay, getPreviousMonth, getNextMonth)
 import View exposing (renderWidget)
@@ -32,8 +32,8 @@ update action model =
       -> { model | showPicker <- True, browseDate <- (Maybe.withDefault model.currentDate model.selectedDate) }
     Actions.HidePicker
       -> { model | showPicker <- False }
-    Actions.SetCurrentTime time
-      -> { model | currentDate <- (fromTime time)}
+    Actions.SampleAndDelegate (time, act)
+      -> update act { model | currentDate <- (fromTime time)} -- sample current time and do the action
     Actions.NoOp
       -> model
 
@@ -47,7 +47,7 @@ view address model = lazy2 renderWidget address model
 
 
 signals : Signal Action
-signals = Signal.merge picker.signal (Signal.map Actions.SetCurrentTime (Time.every second))
+signals =  Signal.map Actions.SampleAndDelegate (timestamp picker.signal)
 
 
 main : Signal Html
