@@ -1,10 +1,11 @@
 module DatePicker where
 
-import Html exposing (Html, table, td, tr, th, div, text, span, h2, img)
+import Html exposing (Html, table, td, tr, th, div, text, span, h2, img, button)
 import Html.Attributes exposing (style, src)
 import Html.Events exposing (onClick)
+import Html.Lazy exposing (lazy, lazy2, lazy3)
 import Date exposing (Date, Day, fromTime, toTime, month, day, year, dayOfWeek)
-import Time exposing (Time)
+import Time exposing (Time, hour, second)
 import Signal exposing (Address)
 import Date.Format exposing (format)
 
@@ -76,20 +77,16 @@ dayIntMapper key selector =
     case List.head(List.filter f weekdayTuples) of
       Nothing
         -> (-1, Date.Mon) -- shouldn't ever happen
-      Just tuple
-        -> tuple
+      Just found
+        -> found
 
 
-hInDay : Time
-hInDay = 24.0
-
-
-secInHour : Time
-secInHour = 3600.0
+hoursInDay : Time
+hoursInDay = 24.0
 
 
 daysToMillis : Time -> Time
-daysToMillis d = d * hInDay * secInHour * 1000
+daysToMillis d = d * hoursInDay * Time.hour
 
 
 firstDayOfMonth : Date -> Date
@@ -135,9 +132,11 @@ groupByWeek dayList current =
     days
       -> groupByWeek (List.drop 7 days) (current ++ [List.take 7 days])
 
+
 comparableByDay : Date -> Int
 comparableByDay date =
   (year date) * 10000 + (monthToInt (month date)) * 100 + (day date)
+
 
 renderDay : Address Action -> Model -> Maybe Date -> Html
 renderDay address model date =
@@ -167,6 +166,7 @@ renderRow : Address Action -> Model -> List (Maybe Date) -> Html
 renderRow address model dayList =
   tr [] (List.map (renderDay address model) dayList)
 
+
 renderHeaderRow : Day -> Html
 renderHeaderRow startOfWeek =
   let days = daysOfWeek ++ daysOfWeek
@@ -187,6 +187,7 @@ renderTable address model dayList =
         ([renderHeaderRow model.firstDayOfWeek] ++
         (List.map (renderRow address model) daysByWeek))
 
+
 renderTableHeader : Address Action -> Model -> Html
 renderTableHeader address model =
   div [style [("width", "4em"), ("margin-left", "auto"), ("margin-right", "auto"), ("position", "relative"), ("padding-bottom", "1em")]]
@@ -199,6 +200,7 @@ renderTableHeader address model =
          ]
       ]
     ]
+
 
 renderSelected: Model -> Html
 renderSelected model =
@@ -213,18 +215,28 @@ renderSelected model =
     div []
       [text ("Valittu päivä:" ++ selectedText)]
 
+renderButton : Address Action -> Model -> Html
+renderButton address model =
+  button [onClick address PickerClick] [text "Pick"]
+
+
 renderPicker : Address Action -> Model -> Html
 renderPicker address model =
   let allDays = daysOfTheMonth model.browseDate
       paddedList = padByStartOfWeek model.firstDayOfWeek allDays
   in
-      div [style [("width", "12em")]]
-        [ renderSelected model
-        , renderTableHeader address model
-        , renderTable address model paddedList
-        ]
+      div [style [("width", "12em"), ("z-index", "1")]]
+        ([ renderSelected model
+         , renderButton address model
+         ] ++
+      if model.showPicker then
+         [ renderTableHeader address model
+         , renderTable address model paddedList
+         ]
+      else
+         [])
 
-type Action = PreviousMonth | NextMonth | SelectDate Date | NoOp
+type Action = PreviousMonth | NextMonth | SelectDate Date | PickerClick | NoOp
 
 
 type alias Model =
@@ -261,6 +273,8 @@ update action model =
       -> { model | browseDate <- getNextMonth model.browseDate}
     SelectDate date
       -> { model | selectedDate <- Just date}
+    PickerClick
+      -> { model | showPicker <- not(model.showPicker) }
     NoOp
       -> model
 
@@ -269,7 +283,7 @@ picker = Signal.mailbox NoOp
 
 
 view : Address Action -> Model -> Html
-view address model = renderPicker address model
+view address model = lazy2 renderPicker address model
 
 
 main : Signal Html
