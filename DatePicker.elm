@@ -18,6 +18,7 @@ model =
   in
     Model curDate curDate Nothing Date.Mon False
 
+
 update : Action -> Model -> Model
 update action model =
   case action of
@@ -44,8 +45,10 @@ picker = Signal.mailbox Actions.NoOp
 view : Address Action -> Model -> Html
 view address model = lazy2 renderWidget address model
 
+
 signals : Signal Action
 signals = Signal.merge picker.signal (Signal.map Actions.SetCurrentTime (Time.every second))
+
 
 main : Signal Html
 main = Signal.map (view picker.address) (Signal.foldp update model signals)
