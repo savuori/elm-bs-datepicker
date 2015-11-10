@@ -9,9 +9,9 @@ import Signal exposing (Address)
 import Time exposing (Time, timestamp)
 import Date.Format exposing (format)
 
+import Localized
+
 import Arithmetic exposing ( dayToInt
-                           , localizedWeekday
-                           , localizedMonth
                            , daysOfWeek
                            , comparableByDay
                            , groupByWeek
@@ -52,7 +52,7 @@ renderHeaderRow startOfWeek =
   let days = daysOfWeek ++ daysOfWeek
       startIndex = dayToInt startOfWeek
       adjustedDays = days |> (List.drop (startIndex - 1)) |> (List.take 7)
-      localizedDays = List.map (localizedWeekday "en_US") adjustedDays
+      localizedDays = List.map (Localized.weekday "en_US") adjustedDays
       renderDay d = th [class "dow"] [text d]
   in
       tr []
@@ -79,7 +79,7 @@ renderBody address model =
 renderCurrentDate : Model -> Html
 renderCurrentDate model =
   let y = (year model.browseDate)
-      m = (localizedMonth "en_US" (month model.browseDate))
+      m = (Localized.month "en_US" (month model.browseDate))
   in
       text (m ++ " " ++ (toString y))
 
