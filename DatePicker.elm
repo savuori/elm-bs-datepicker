@@ -1,8 +1,8 @@
 module DatePicker where
 
-import Html exposing (Html, table, td, tr, th, div, text, span, h2, img, button, thead, tbody)
-import Html.Attributes exposing (style, src, class, colspan)
-import Html.Events exposing (onClick)
+import Html exposing (Html, table, td, tr, th, div, text, span, thead, tbody, input)
+import Html.Attributes exposing (style, src, class, colspan, type', placeholder, value)
+import Html.Events exposing (onClick, onFocus)
 import Html.Lazy exposing (lazy, lazy2, lazy3)
 import Date exposing (Date, Day, fromTime, toTime, month, day, year, dayOfWeek)
 import Time exposing (Time, hour, second)
@@ -152,7 +152,7 @@ renderDay address model date =
     Just d
       ->
        let currentDay = model.dateNow |> comparableByDay
-           selectedDay = model.selectedDate |> Maybe.withDefault (fromTime 0) |> comparableByDay
+           selectedDay = model.selectedDate |> Maybe.withDefault model.dateNow |> comparableByDay
            renderedDay = d |> day
            classes = if | selectedDay == (comparableByDay d) -> "day active"
                         | otherwise -> "day"
@@ -189,25 +189,6 @@ renderTable address model dayList =
         (List.map (renderRow address model) daysByWeek))
 
 
-renderSelected: Model -> Html
-renderSelected model =
-  let selectedText =
-    case model.selectedDate of
-
-      Nothing
-        -> "Ei valittu"
-      Just date
-        -> (format "%d.%m.%Y" date)
-  in
-    div []
-      [text ("Valittu päivä:" ++ selectedText)]
-
-
-renderButton : Address Action -> Model -> Html
-renderButton address model =
-  button [onClick address PickerClick] [text "Pick"]
-
-
 renderBody : Address Action -> Model -> Html
 renderBody address model =
   let allDays = daysOfTheMonth model.browseDate
@@ -236,21 +217,46 @@ renderHeader address model =
      ]
    ]
 
-
-renderWidget : Address Action -> Model -> Html
-renderWidget address model =
-  div [class "container"]
-    [ div [class "datepicker datepicker-dropdown dropdown-menu datepicker-orient-left datepicker-orient-top"]
+renderCalendar : Address Action -> Model -> Html
+renderCalendar address model =
+  let disp = if model.showPicker then "block" else "none"
+  in
+    div [ class "datepicker datepicker-dropdown dropdown-menu datepicker-orient-left datepicker-orient-top"
+        , style [ ("display", disp)
+                , ("top", "25px")
+              --  , ("left", "120px")
+                ]
+        ]
       [ table [class "table-condensed"]
         [ renderHeader address model
         , renderBody address model
         ]
       ]
+
+renderInput : Address Action -> Model -> Html
+renderInput address model =
+  let val = case model.selectedDate of
+              Nothing
+                -> []
+              Just d
+                -> [value (format "%d.%m.%Y" d)]
+  in
+    div [class "hero-unit"]
+      [
+        input ([ type' "text"
+              , placeholder "click to pick a date"
+              , onFocus address ShowPicker
+              ] ++ val)
+              []
+      ]
+
+
+renderWidget : Address Action -> Model -> Html
+renderWidget address model =
+  div [class "container", style [("position", "relative")]]
+    [ renderInput address model
+    , renderCalendar address model
     ]
-
-
-
-type Action = PreviousMonth | NextMonth | SelectDate Date | PickerClick | NoOp
 
 
 type alias Model =
@@ -282,6 +288,8 @@ model =
     Model curDate curDate Nothing Date.Mon False
 
 
+type Action = PreviousMonth | NextMonth | SelectDate Date | ShowPicker | HidePicker | NoOp
+
 update : Action -> Model -> Model
 update action model =
   case action of
@@ -290,9 +298,11 @@ update action model =
     NextMonth
       -> { model | browseDate <- getNextMonth model.browseDate}
     SelectDate date
-      -> { model | selectedDate <- Just date}
-    PickerClick
-      -> { model | showPicker <- not(model.showPicker) }
+      -> { model | selectedDate <- Just date, showPicker <- False}
+    ShowPicker
+      -> { model | showPicker <- True }
+    HidePicker
+      -> { model | showPicker <- False }
     NoOp
       -> model
 
