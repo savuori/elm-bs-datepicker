@@ -61,7 +61,7 @@ localizedWeekday locale d =
         Date.Fri -> "Pe"
         Date.Sat -> "La"
         Date.Sun -> "Su"
-    "fi_FI" ->
+    "en_US" ->
       case d of
         Date.Mon -> "Mo"
         Date.Tue -> "Tu"

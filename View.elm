@@ -49,7 +49,7 @@ renderHeaderRow startOfWeek =
   let days = daysOfWeek ++ daysOfWeek
       startIndex = dayToInt startOfWeek
       adjustedDays = days |> (List.drop (startIndex - 1)) |> (List.take 7)
-      localizedDays = List.map (localizedWeekday "fi_FI") adjustedDays
+      localizedDays = List.map (localizedWeekday "en_US") adjustedDays
       renderDay d = th [class "dow"] [text d]
   in
       tr []
@@ -76,7 +76,7 @@ renderBody address model =
 renderCurrentDate : Model -> Html
 renderCurrentDate model =
   let y = (year model.browseDate)
-      m = (localizedMonth "fi_FI" (month model.browseDate))
+      m = (localizedMonth "en_US" (month model.browseDate))
   in
       text (m ++ " " ++ (toString y))
 
@@ -115,7 +115,7 @@ renderInput address model =
               Nothing
                 -> []
               Just d
-                -> [value (format "%d.%m.%Y" d)]
+                -> [value (format "%m/%d/%Y" d)]
   in
     div [class "hero-unit"]
       [
