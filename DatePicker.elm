@@ -1,7 +1,7 @@
 module DatePicker where
 
-import Html exposing (Html, table, td, tr, th, div, text, span, h2, img, button)
-import Html.Attributes exposing (style, src)
+import Html exposing (Html, table, td, tr, th, div, text, span, h2, img, button, thead, tbody)
+import Html.Attributes exposing (style, src, class, colspan)
 import Html.Events exposing (onClick)
 import Html.Lazy exposing (lazy, lazy2, lazy3)
 import Date exposing (Date, Day, fromTime, toTime, month, day, year, dayOfWeek)
@@ -43,6 +43,7 @@ localizedMonth locale m =
         Date.Nov -> "Marraskuu"
         Date.Dec -> "Joulukuu"
 
+
 localizedWeekday : String -> Date.Day -> String
 localizedWeekday locale d =
   case locale of
@@ -56,19 +57,24 @@ localizedWeekday locale d =
         Date.Sat -> "La"
         Date.Sun -> "Su"
 
+
 daysOfWeek : List Day
 daysOfWeek = [Date.Mon, Date.Tue, Date.Wed, Date.Thu, Date.Fri, Date.Sat, Date.Sun]
+
 
 weekdayTuples : List (Int, Day)
 weekdayTuples = List.map2 (,) [1..7] daysOfWeek
 
+
 dayToInt : Day -> Int
 dayToInt day = fst(dayIntMapper day snd)
+
 
 intToDay : Int -> Day
 intToDay num =
   let limitedNum = ((num - 1) % 7) + 1
   in snd(dayIntMapper limitedNum fst)
+
 
 dayIntMapper : b -> ((Int, Day) -> b) -> (Int, Day)
 dayIntMapper key selector =
@@ -148,18 +154,13 @@ renderDay address model date =
        let currentDay = model.dateNow |> comparableByDay
            selectedDay = model.selectedDate |> Maybe.withDefault (fromTime 0) |> comparableByDay
            renderedDay = d |> day
-           bgColor = if | currentDay == (comparableByDay d) -> "#90A0E0"
-                        | selectedDay == (comparableByDay d) -> "#B06090"
-                        | otherwise -> "#D5E5F5"
+           classes = if | selectedDay == (comparableByDay d) -> "day active"
+                        | otherwise -> "day"
        in
-           td [ (style [("text-align", "center")
-                     ,("padding", "3px 5px")
-                     ,("background-color", bgColor)
-                     ,("cursor", "pointer")
-                     ])
-              , onClick address (SelectDate d)
+           td [ onClick address (SelectDate d)
+              , class classes
               ]
-              [d |> day |> toString |> text]
+              [renderedDay |> toString |> text]
 
 
 renderRow : Address Action -> Model -> List (Maybe Date) -> Html
@@ -173,7 +174,7 @@ renderHeaderRow startOfWeek =
       startIndex = dayToInt startOfWeek
       adjustedDays = days |> (List.drop (startIndex - 1)) |> (List.take 7)
       localizedDays = List.map (localizedWeekday "fi_FI") adjustedDays
-      renderDay d = td [] [text d]
+      renderDay d = th [class "dow"] [text d]
   in
       tr []
         (List.map renderDay localizedDays)
@@ -183,23 +184,9 @@ renderTable : Address Action -> Model -> List (Maybe Date) -> Html
 renderTable address model dayList =
   let daysByWeek = groupByWeek dayList []
   in
-      table [style [("padding", "0.5em"), ("background-color", "#F0F5F5")]]
+      tbody []
         ([renderHeaderRow model.firstDayOfWeek] ++
         (List.map (renderRow address model) daysByWeek))
-
-
-renderTableHeader : Address Action -> Model -> Html
-renderTableHeader address model =
-  div [style [("width", "4em"), ("margin-left", "auto"), ("margin-right", "auto"), ("position", "relative"), ("padding-bottom", "1em")]]
-    [div []
-      [ (h2 [style [("padding-left", "0.3em")]] [(model.browseDate) |> year |> toString |> text])
-      , div []
-         [ (img [onClick address PreviousMonth, style [("cursor", "pointer"), ("position", "absolute"), ("left", "-2em"), ("bottom", "0"), ("width", "24px")], src "arrowleft.png"] [])
-         , (span [style [("text-align", "center"), ("position", "absolute"), ("bottom", "0.1em")]] [text (localizedMonth "fi_FI" (month model.browseDate))])
-         , (img [onClick address NextMonth, style [("cursor", "pointer"), ("position", "absolute"), ("right", "-3em"), ("bottom", "0"), ("width", "24px") ], src "arrowright.png"] [])
-         ]
-      ]
-    ]
 
 
 renderSelected: Model -> Html
@@ -215,26 +202,53 @@ renderSelected model =
     div []
       [text ("Valittu päivä:" ++ selectedText)]
 
+
 renderButton : Address Action -> Model -> Html
 renderButton address model =
   button [onClick address PickerClick] [text "Pick"]
 
 
-renderPicker : Address Action -> Model -> Html
-renderPicker address model =
+renderBody : Address Action -> Model -> Html
+renderBody address model =
   let allDays = daysOfTheMonth model.browseDate
       paddedList = padByStartOfWeek model.firstDayOfWeek allDays
   in
-      div [style [("width", "12em"), ("z-index", "1")]]
-        ([ renderSelected model
-         , renderButton address model
-         ] ++
-      if model.showPicker then
-         [ renderTableHeader address model
-         , renderTable address model paddedList
-         ]
-      else
-         [])
+      renderTable address model paddedList
+
+
+renderCurrentDate : Model -> Html
+renderCurrentDate model =
+  let y = (year model.browseDate)
+      m = (localizedMonth "fi_FI" (month model.browseDate))
+  in
+      text (m ++ " " ++ (toString y))
+
+
+renderHeader : Address Action -> Model -> Html
+renderHeader address model =
+  thead []
+   [
+    tr []
+     [ th [class "prev", onClick address PreviousMonth] [text "«"]
+     , th [class "datepicker-switch", colspan 5]
+         [renderCurrentDate model]
+     , th [class "next", onClick address NextMonth] [text "»"]
+     ]
+   ]
+
+
+renderWidget : Address Action -> Model -> Html
+renderWidget address model =
+  div [class "container"]
+    [ div [class "datepicker datepicker-dropdown dropdown-menu datepicker-orient-left datepicker-orient-top"]
+      [ table [class "table-condensed"]
+        [ renderHeader address model
+        , renderBody address model
+        ]
+      ]
+    ]
+
+
 
 type Action = PreviousMonth | NextMonth | SelectDate Date | PickerClick | NoOp
 
@@ -247,9 +261,11 @@ type alias Model =
   , showPicker : Bool
   }
 
+
 getPreviousMonth : Date -> Date
 getPreviousMonth date =
   fromTime ((toTime (firstDayOfMonth date)) - (daysToMillis 1))
+
 
 getNextMonth : Date -> Date
 getNextMonth date =
@@ -258,11 +274,13 @@ getNextMonth date =
   in
       fromTime ((toTime date) + (daysToMillis daysToForward))
 
+
 model : Model
 model =
   let curDate = (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
   in
     Model curDate curDate Nothing Date.Mon False
+
 
 update : Action -> Model -> Model
 update action model =
@@ -278,12 +296,13 @@ update action model =
     NoOp
       -> model
 
+
 picker : Signal.Mailbox Action
 picker = Signal.mailbox NoOp
 
 
 view : Address Action -> Model -> Html
-view address model = lazy2 renderPicker address model
+view address model = lazy2 renderWidget address model
 
 
 main : Signal Html
