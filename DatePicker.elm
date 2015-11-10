@@ -1,12 +1,10 @@
 module DatePicker where
 
 import Html exposing (Html, table, td, tr, th, div, text, span, thead, tbody, input)
-import Html.Attributes exposing (style, src, class, colspan, type', placeholder, value)
-import Html.Events exposing (onClick, onFocus)
 import Html.Lazy exposing (lazy, lazy2, lazy3)
 import Date exposing (Date, Day, fromTime, toTime, month, day, year, dayOfWeek)
 import Signal exposing (Address)
-import Date.Format exposing (format)
+import Time exposing (hour, second, minute, Time)
 
 import Arithmetic exposing (daysToMillis, firstDayOfMonth, comparableByDay, getPreviousMonth, getNextMonth)
 import View exposing (renderWidget)
@@ -16,7 +14,7 @@ import Actions exposing (Action)
 
 model : Model
 model =
-  let curDate = (Date.fromTime (1446974630870 - (3600 * 24 * 1000 * 0)))
+  let curDate = (Date.fromTime 0)
   in
     Model curDate curDate Nothing Date.Mon False
 
@@ -30,9 +28,11 @@ update action model =
     Actions.SelectDate date
       -> { model | selectedDate <- Just date, showPicker <- False}
     Actions.ShowPicker
-      -> { model | showPicker <- True }
+      -> { model | showPicker <- True, browseDate <- (Maybe.withDefault model.currentDate model.selectedDate) }
     Actions.HidePicker
       -> { model | showPicker <- False }
+    Actions.SetCurrentTime time
+      -> { model | currentDate <- (fromTime time)}
     Actions.NoOp
       -> model
 
@@ -44,6 +44,8 @@ picker = Signal.mailbox Actions.NoOp
 view : Address Action -> Model -> Html
 view address model = lazy2 renderWidget address model
 
+signals : Signal Action
+signals = Signal.merge picker.signal (Signal.map Actions.SetCurrentTime (Time.every second))
 
 main : Signal Html
-main = Signal.map (view picker.address) (Signal.foldp update model picker.signal)
+main = Signal.map (view picker.address) (Signal.foldp update model signals)

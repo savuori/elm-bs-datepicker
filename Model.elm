@@ -2,7 +2,7 @@ module Model where
 import Date exposing (Date, Day)
 
 type alias Model =
-  { dateNow : Date
+  { currentDate : Date
   , browseDate : Date
   , selectedDate : Maybe Date
   , firstDayOfWeek : Date.Day

@@ -27,8 +27,8 @@ renderDay address model date =
       -> td [] []
     Just d
       ->
-       let currentDay = model.dateNow |> comparableByDay
-           selectedDay = model.selectedDate |> Maybe.withDefault model.dateNow |> comparableByDay
+       let currentDay = model.currentDate |> comparableByDay
+           selectedDay = model.selectedDate |> Maybe.withDefault model.currentDate |> comparableByDay
            renderedDay = d |> day
            classes = if | selectedDay == (comparableByDay d) -> "day active"
                         | otherwise -> "day"
